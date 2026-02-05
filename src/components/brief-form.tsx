@@ -180,27 +180,50 @@ export default function BriefForm() {
     return (
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8 max-w-4xl mx-auto p-4 md:p-8">
 
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8 sticky top-0 z-10 py-4 -mx-4 px-4 bg-background/60 backdrop-blur-md border-b md:border-none md:static md:bg-transparent md:p-0">
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8 sticky top-0 z-10 py-4 -mx-4 px-4 bg-background/80 backdrop-blur-xl border-b shadow-sm md:border-none md:static md:bg-transparent md:p-0 md:shadow-none">
                 <div>
-                    <div>
-                        <img src="/images/gradus-logo-full.png" alt="Gradus Agency" className="h-16 w-auto mb-2 object-contain" />
-                        <p className="text-muted-foreground ml-1">Authentic 7Ciel Ramadan Brief Template</p>
-                    </div>        </div>
-                <div className="flex gap-2">
+                    <img src="/images/gradus-logo-full.png" alt="Gradus Agency" className="h-16 w-auto object-contain" />
+                </div>
+                <div className="flex flex-wrap gap-2">
                     <input type="file" id="file-upload" className="hidden" accept=".json" onChange={handleImport} />
-                    <Button type="button" variant="outline" size="sm" onClick={() => document.getElementById('file-upload')?.click()} className="hover:bg-primary/10 hover:text-primary border-primary/20">
-                        <Upload className="w-4 h-4 mr-2" /> Load
+                    <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => document.getElementById('file-upload')?.click()}
+                        className="group bg-white hover:bg-blue-50 hover:border-blue-400 hover:text-blue-600 border-slate-200 transition-all duration-300 shadow-sm hover:shadow-lg hover:shadow-blue-500/20 hover:scale-105 active:scale-95"
+                    >
+                        <Upload className="w-4 h-4 mr-2 transition-transform duration-300 group-hover:-translate-y-0.5" /> Load
                     </Button>
-                    <Button type="button" variant="outline" size="sm" asChild className="hover:bg-primary/10 hover:text-primary border-primary/20">
+                    <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        asChild
+                        className="group bg-white hover:bg-purple-50 hover:border-purple-400 hover:text-purple-600 border-slate-200 transition-all duration-300 shadow-sm hover:shadow-lg hover:shadow-purple-500/20 hover:scale-105 active:scale-95"
+                    >
                         <Link href="/archive">
-                            <FolderOpen className="w-4 h-4 mr-2" /> Archive
+                            <FolderOpen className="w-4 h-4 mr-2 transition-transform duration-300 group-hover:rotate-12" /> Archive
                         </Link>
                     </Button>
-                    <Button type="button" variant="outline" size="sm" onClick={handleExport} className="hover:bg-primary/10 hover:text-primary border-primary/20">
-                        <Save className="w-4 h-4 mr-2" /> Save
+                    <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={handleExport}
+                        className="group bg-white hover:bg-green-50 hover:border-green-400 hover:text-green-600 border-slate-200 transition-all duration-300 shadow-sm hover:shadow-lg hover:shadow-green-500/20 hover:scale-105 active:scale-95"
+                    >
+                        <Save className="w-4 h-4 mr-2 transition-transform duration-300 group-hover:translate-y-0.5" /> Save
                     </Button>
-                    <Button type="button" variant="ghost" size="icon" onClick={handleReset} title="Reset Form" className="text-muted-foreground hover:text-destructive">
-                        <RotateCcw className="w-4 h-4" />
+                    <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        onClick={handleReset}
+                        title="Reset Form"
+                        className="group text-muted-foreground hover:text-red-600 hover:bg-red-50 transition-all duration-300 hover:scale-110 active:scale-95"
+                    >
+                        <RotateCcw className="w-4 h-4 transition-transform duration-500 group-hover:rotate-180" />
                     </Button>
                 </div>
             </div>
