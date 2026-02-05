@@ -65,16 +65,19 @@ export default function BriefForm() {
 
     const { fields: headlines, append: appendHeadline, remove: removeHeadline } = useFieldArray({
         control,
+        // @ts-ignore
         name: "copy.headlines"
     })
 
     const { fields: ctas, append: appendCta, remove: removeCta } = useFieldArray({
         control,
+        // @ts-ignore
         name: "copy.ctas"
     })
 
     const { fields: assetLinks, append: appendAssetLink, remove: removeAssetLink } = useFieldArray({
         control,
+        // @ts-ignore
         name: "assets.assetsLinks"
     })
 

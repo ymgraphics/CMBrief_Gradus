@@ -36,8 +36,8 @@ export const briefSchema = z.object({
         secondaryMessage: z.string().optional(),
     }),
     copy: z.object({
-        headlines: z.array(z.string()).optional(),
-        ctas: z.array(z.string()).optional(),
+        headlines: z.array(z.string()),
+        ctas: z.array(z.string()),
         language: z.string().optional(),
     }),
     visual: z.object({
@@ -58,7 +58,7 @@ export const briefSchema = z.object({
         provideLogos: z.boolean(),
         provideGuidelines: z.boolean(),
         providePrevious: z.boolean(),
-        assetsLinks: z.array(z.string()).optional(),
+        assetsLinks: z.array(z.string()),
     }),
     deliverables: z.object({
         finalFormat: z.string().optional(), // JPG, PNG, etc.
