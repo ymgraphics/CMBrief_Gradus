@@ -25,7 +25,15 @@ export default function ArchivePage() {
         const fetchBriefs = async () => {
             try {
                 const res = await fetch("/api/briefs/list");
-                const data = await res.json();
+                let data;
+
+                try {
+                    data = await res.json();
+                } catch (e) {
+                    // If JSON parse fails (e.g. 500 HTML error), read text
+                    const text = await res.text().catch(() => "Unknown error");
+                    throw new Error(`Server Error (${res.status}): ${text.substring(0, 100)}...`);
+                }
 
                 if (!res.ok) {
                     throw new Error(data.error || "Failed to fetch briefs");
