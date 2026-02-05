@@ -1,194 +1,210 @@
-"use client";
+"use client"
 
-import { useEffect, useState } from "react";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { format } from "date-fns";
-import Link from "next/link";
-import { ArrowLeft, Download, FileText, FolderOpen, ChevronRight, Folder } from "lucide-react";
-
-interface BriefFile {
-    name: string;
-    client: string;
-    createdAt: string;
-    size: number;
-    path: string;
-}
+import { useEffect, useState } from "react"
+import { storage, SavedBrief } from "@/lib/storage"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
+import { Download, Trash2, FolderOpen, FileText } from "lucide-react"
+import { toast } from "sonner"
+import { pdf } from "@react-pdf/renderer"
+import { BriefDocument } from "@/components/brief-pdf"
+import { useBriefStore } from "@/lib/store"
+import { useRouter } from "next/navigation"
+import { motion } from "framer-motion"
 
 export default function ArchivePage() {
-    const [briefs, setBriefs] = useState<BriefFile[]>([]);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
-    const [selectedClient, setSelectedClient] = useState<string | null>(null);
+    const [groupedBriefs, setGroupedBriefs] = useState<Record<string, SavedBrief[]>>({})
+    const [loading, setLoading] = useState(true)
+    const { setData } = useBriefStore()
+    const router = useRouter()
 
     useEffect(() => {
-        const fetchBriefs = async () => {
-            try {
-                const res = await fetch("/api/briefs/list");
-                let data;
+        loadBriefs()
+    }, [])
 
-                try {
-                    data = await res.json();
-                } catch (e) {
-                    // If JSON parse fails (e.g. 500 HTML error), read text
-                    const text = await res.text().catch(() => "Unknown error");
-                    throw new Error(`Server Error (${res.status}): ${text.substring(0, 100)}...`);
-                }
-
-                if (!res.ok) {
-                    throw new Error(data.error || "Failed to fetch briefs");
-                }
-
-                if (data.files) {
-                    setBriefs(data.files);
-                }
-            } catch (err: any) {
-                console.error("Failed to fetch briefs", err);
-                setError(err.message);
-                setBriefs([]);
-            } finally {
-                setLoading(false);
-            }
-        };
-
-        fetchBriefs();
-    }, []);
-
-    // Group briefs by client
-    const briefsByClient = briefs.reduce((acc, brief) => {
-        if (!acc[brief.client]) {
-            acc[brief.client] = [];
+    const loadBriefs = () => {
+        try {
+            const grouped = storage.groupByClient()
+            setGroupedBriefs(grouped)
+        } catch (error) {
+            console.error("Failed to load briefs:", error)
+            toast.error("Failed to load archive")
+        } finally {
+            setLoading(false)
         }
-        acc[brief.client].push(brief);
-        return acc;
-    }, {} as Record<string, BriefFile[]>);
+    }
 
-    const clientNames = Object.keys(briefsByClient).sort();
+    const handleRegenerate = async (brief: SavedBrief) => {
+        try {
+            // Load data into form
+            setData(brief.data)
+
+            // Generate PDF
+            const blob = await pdf(<BriefDocument data={brief.data} />).toBlob()
+            const url = URL.createObjectURL(blob)
+
+            const clientName = brief.clientName.replace(/[^a-z0-9]/gi, '_').toLowerCase()
+            const projectName = brief.projectName.replace(/[^a-z0-9]/gi, '_').toLowerCase()
+            const date = new Date().toISOString().split('T')[0]
+            const filename = `${clientName}_${projectName}_${date}.pdf`
+
+            // Download
+            const link = document.createElement('a')
+            link.href = url
+            link.download = filename
+            document.body.appendChild(link)
+            link.click()
+            document.body.removeChild(link)
+
+            toast.success("PDF regenerated!", {
+                description: "The brief has been downloaded.",
+                duration: 3000,
+            })
+        } catch (error) {
+            console.error("Failed to regenerate:", error)
+            toast.error("Failed to regenerate PDF")
+        }
+    }
+
+    const handleLoadToForm = (brief: SavedBrief) => {
+        setData(brief.data)
+        router.push("/")
+        toast.success("Brief loaded!", {
+            description: "The brief data has been loaded into the form.",
+            duration: 3000,
+        })
+    }
+
+    const handleDelete = (id: string, projectName: string) => {
+        if (confirm(`Delete "${projectName}"? This cannot be undone.`)) {
+            storage.delete(id)
+            loadBriefs()
+            toast.success("Brief deleted")
+        }
+    }
+
+    if (loading) {
+        return (
+            <div className="min-h-screen flex items-center justify-center">
+                <div className="text-center">
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+                    <p className="text-muted-foreground">Loading archive...</p>
+                </div>
+            </div>
+        )
+    }
+
+    const clientNames = Object.keys(groupedBriefs)
+
+    if (clientNames.length === 0) {
+        return (
+            <div className="min-h-screen flex items-center justify-center p-4">
+                <Card className="max-w-md w-full text-center">
+                    <CardHeader>
+                        <FolderOpen className="w-16 h-16 mx-auto text-muted-foreground mb-4" />
+                        <CardTitle>No Saved Briefs</CardTitle>
+                        <CardDescription>
+                            Your archive is empty. Save briefs from the generator to see them here.
+                        </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <Button onClick={() => router.push("/")} className="w-full">
+                            Go to Generator
+                        </Button>
+                    </CardContent>
+                </Card>
+            </div>
+        )
+    }
 
     return (
-        <div className="min-h-screen bg-slate-50 p-8 font-sans">
-            <div className="max-w-5xl mx-auto space-y-8">
+        <div className="min-h-screen py-10 px-4 md:px-8">
+            <div className="max-w-7xl mx-auto">
                 {/* Header */}
-                <div className="flex items-center justify-between">
-                    <div>
-                        {selectedClient ? (
-                            <button
-                                onClick={() => setSelectedClient(null)}
-                                className="inline-flex items-center text-sm font-medium text-slate-500 hover:text-slate-900 mb-4 transition-colors"
-                            >
-                                <ArrowLeft className="w-4 h-4 mr-2" />
-                                Back to Folders
-                            </button>
-                        ) : (
-                            <Link href="/" className="inline-flex items-center text-sm font-medium text-slate-500 hover:text-slate-900 mb-4 transition-colors">
-                                <ArrowLeft className="w-4 h-4 mr-2" />
-                                Back to Generator
-                            </Link>
-                        )}
-                        <h1 className="text-3xl font-bold text-slate-900 tracking-tight">
-                            {selectedClient ? selectedClient : "Brief Archive"}
-                        </h1>
-                        <p className="text-slate-500 mt-2">
-                            {selectedClient
-                                ? `Viewing ${briefsByClient[selectedClient]?.length} saved briefs.`
-                                : "Access all generated briefs, organized by client."}
-                        </p>
+                <div className="mb-8">
+                    <div className="flex items-center justify-between mb-4">
+                        <div>
+                            <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+                                Brief Archive
+                            </h1>
+                            <p className="text-muted-foreground mt-2">
+                                {Object.values(groupedBriefs).flat().length} saved brief{Object.values(groupedBriefs).flat().length !== 1 ? 's' : ''} across {clientNames.length} client{clientNames.length !== 1 ? 's' : ''}
+                            </p>
+                        </div>
+                        <Button onClick={() => router.push("/")} variant="outline">
+                            Back to Generator
+                        </Button>
                     </div>
                 </div>
 
-                {loading ? (
-                    <div className="text-center py-12">
-                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
-                        <p className="mt-4 text-slate-500">Loading archive...</p>
-                    </div>
-                ) : error ? (
-                    <Card className="border-destructive/50 bg-destructive/5">
-                        <CardContent className="flex flex-col items-center justify-center py-16 text-center">
-                            <div className="bg-destructive/10 p-4 rounded-full mb-4 text-destructive">
-                                <FolderOpen className="w-8 h-8" />
-                            </div>
-                            <h3 className="text-lg font-medium text-destructive">Archive Unavailable</h3>
-                            <p className="text-destructive/80 max-w-md mt-2">
-                                {error}
-                            </p>
-                            <p className="text-sm text-muted-foreground mt-4">
-                                Check your Cloudflare project settings {">"} R2 Bucket Bindings.
-                            </p>
-                        </CardContent>
-                    </Card>
-                ) : briefs.length === 0 ? (
-                    <Card className="border-dashed">
-                        <CardContent className="flex flex-col items-center justify-center py-16 text-center">
-                            <FolderOpen className="w-12 h-12 text-slate-300 mb-4" />
-                            <h3 className="text-lg font-medium text-slate-900">No briefs found</h3>
-                            <p className="text-slate-500 max-w-sm mt-2">
-                                Generated briefs will appear here automatically.
-                            </p>
-                            <Button asChild className="mt-6">
-                                <Link href="/">Generate a Brief</Link>
-                            </Button>
-                        </CardContent>
-                    </Card>
-                ) : (
-                    <>
-                        {/* Folder Grid View */}
-                        {!selectedClient && (
-                            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-6">
-                                {clientNames.map((client) => (
-                                    <div
-                                        key={client}
-                                        onClick={() => setSelectedClient(client)}
-                                        className="group cursor-pointer flex flex-col items-center p-6 bg-white rounded-xl shadow-sm border border-slate-100 hover:shadow-md hover:border-primary/20 hover:scale-[1.02] transition-all duration-200"
-                                    >
-                                        <div className="bg-blue-50 text-blue-500 p-4 rounded-full mb-4 group-hover:bg-blue-100 group-hover:text-blue-600 transition-colors">
-                                            <Folder className="w-8 h-8 fill-current" />
-                                        </div>
-                                        <h3 className="font-semibold text-slate-900 text-center truncate w-full" title={client}>
-                                            {client}
-                                        </h3>
-                                        <span className="text-xs font-medium text-slate-500 mt-1">
-                                            {briefsByClient[client].length} file{briefsByClient[client].length !== 1 && 's'}
-                                        </span>
-                                    </div>
-                                ))}
-                            </div>
-                        )}
+                {/* Grouped by Client */}
+                {clientNames.map((clientName) => (
+                    <motion.div
+                        key={clientName}
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.3 }}
+                        className="mb-12"
+                    >
+                        <h2 className="text-2xl font-semibold mb-4 flex items-center gap-2">
+                            <FolderOpen className="w-6 h-6 text-blue-600" />
+                            {clientName}
+                        </h2>
 
-                        {/* File Details View */}
-                        {selectedClient && briefsByClient[selectedClient] && (
-                            <Card className="overflow-hidden border-0 shadow-md">
-                                <CardContent className="p-0">
-                                    <div className="divide-y divide-slate-100">
-                                        {briefsByClient[selectedClient].map((brief) => (
-                                            <div key={brief.path} className="flex items-center p-4 hover:bg-slate-50 transition-colors group">
-                                                <div className="bg-slate-100 p-2 rounded text-slate-400 mr-4 group-hover:text-primary group-hover:bg-primary/5 transition-colors">
-                                                    <FileText className="w-5 h-5" />
-                                                </div>
-                                                <div className="flex-1 min-w-0">
-                                                    <h4 className="text-sm font-medium text-slate-900 truncate pr-4">
-                                                        {brief.name}
-                                                    </h4>
-                                                    <div className="flex items-center text-xs text-slate-500 mt-1 space-x-3">
-                                                        <span>{format(new Date(brief.createdAt), "MMM d, yyyy • h:mm a")}</span>
-                                                        <span>•</span>
-                                                        <span>{(brief.size / 1024).toFixed(1)} KB</span>
-                                                    </div>
-                                                </div>
-                                                <Button variant="outline" size="sm" asChild className="ml-4 shrink-0">
-                                                    <a href={`/api/briefs/${brief.path}`} download>
-                                                        <Download className="w-4 h-4 mr-2" />
-                                                        Download
-                                                    </a>
-                                                </Button>
-                                            </div>
-                                        ))}
-                                    </div>
-                                </CardContent>
-                            </Card>
-                        )}
-                    </>
-                )}
+                        {/* Icon Grid */}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                            {groupedBriefs[clientName].map((brief) => (
+                                <Card
+                                    key={brief.id}
+                                    className="group hover:shadow-xl transition-all duration-300 hover:scale-105 border-2 hover:border-blue-400"
+                                >
+                                    <CardHeader className="pb-3">
+                                        <div className="flex items-start justify-between">
+                                            <FileText className="w-10 h-10 text-blue-600 mb-2" />
+                                            <Button
+                                                variant="ghost"
+                                                size="icon"
+                                                onClick={() => handleDelete(brief.id, brief.projectName)}
+                                                className="opacity-0 group-hover:opacity-100 transition-opacity hover:text-red-600"
+                                            >
+                                                <Trash2 className="w-4 h-4" />
+                                            </Button>
+                                        </div>
+                                        <CardTitle className="text-lg line-clamp-2">
+                                            {brief.projectName}
+                                        </CardTitle>
+                                        <CardDescription className="text-xs">
+                                            {new Date(brief.timestamp).toLocaleDateString('en-US', {
+                                                year: 'numeric',
+                                                month: 'short',
+                                                day: 'numeric'
+                                            })}
+                                        </CardDescription>
+                                    </CardHeader>
+                                    <CardContent className="space-y-2">
+                                        <Button
+                                            onClick={() => handleRegenerate(brief)}
+                                            className="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800"
+                                            size="sm"
+                                        >
+                                            <Download className="w-4 h-4 mr-2" />
+                                            Regenerate PDF
+                                        </Button>
+                                        <Button
+                                            onClick={() => handleLoadToForm(brief)}
+                                            variant="outline"
+                                            className="w-full"
+                                            size="sm"
+                                        >
+                                            Load to Form
+                                        </Button>
+                                    </CardContent>
+                                </Card>
+                            ))}
+                        </div>
+                    </motion.div>
+                ))}
             </div>
         </div>
-    );
+    )
 }

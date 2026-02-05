@@ -6,7 +6,7 @@ import * as z from "zod"
 import { useEffect } from "react"
 import { motion } from "framer-motion"
 import { toast } from "sonner"
-import { Download, Save, Upload, RotateCcw, PlusCircle, MinusCircle, FolderOpen } from "lucide-react"
+import { Download, Save, Upload, RotateCcw, PlusCircle, MinusCircle, FolderOpen, Archive } from "lucide-react"
 import Link from "next/link"
 
 import { Button } from "@/components/ui/button"
@@ -34,6 +34,7 @@ import {
 import { FormField } from "@/components/ui/form-field"
 import { briefSchema, BriefData } from "@/lib/schema"
 import { useBriefStore } from "@/lib/store"
+import { storage } from "@/lib/storage"
 
 import { pdf } from "@react-pdf/renderer"
 import { BriefDocument } from "@/components/brief-pdf"
@@ -93,7 +94,7 @@ export default function BriefForm() {
 
             const filename = `${clientName}_${projectName}_${date}.pdf`
 
-            // 1. Trigger Client Download
+            // Trigger Client Download
             const link = document.createElement('a')
             link.href = url
             link.download = filename
@@ -101,40 +102,40 @@ export default function BriefForm() {
             link.click()
             document.body.removeChild(link)
 
-            // 2. Upload to Server Archive
-            const formData = new FormData()
-            formData.append('file', blob, filename)
-            formData.append('filename', filename)
-            formData.append('clientName', data.general.clientBrand || 'Uncategorized')
-
-            try {
-                const response = await fetch('/api/briefs/save', {
-                    method: 'POST',
-                    body: formData,
-                })
-
-                if (!response.ok) {
-                    const errorData = await response.json().catch(() => ({}));
-                    throw new Error(errorData.error || "Server responded with error");
-                }
-
-                toast.success("PDF generated and saved to Archive!", {
-                    description: "The brief has been successfully generated and archived.",
-                    duration: 5000,
-                })
-            } catch (uploadError: any) {
-                console.error("Failed to upload to archive:", uploadError)
-                toast.warning(`Archive Error: ${uploadError.message}`, {
-                    description: "Ensure Cloudflare R2 binding is configured.",
-                    duration: 5000,
-                })
-            }
+            toast.success("PDF generated successfully!", {
+                description: "The brief has been downloaded to your computer.",
+                duration: 3000,
+            })
 
         } catch (error) {
             console.error(error)
             toast.error("Failed to generate PDF", {
                 description: "An error occurred while generating the PDF. Please try again.",
                 duration: 5000,
+            })
+        }
+    }
+
+    const handleSaveToArchive = () => {
+        try {
+            const clientName = data.general.clientBrand || "Uncategorized"
+            const projectName = data.general.projectName || "Untitled Project"
+
+            storage.save({
+                clientName,
+                projectName,
+                data,
+            })
+
+            toast.success("Saved to Archive!", {
+                description: `${projectName} has been saved. View it in the Archive.`,
+                duration: 3000,
+            })
+        } catch (error) {
+            console.error("Failed to save to archive:", error)
+            toast.error("Failed to save to archive", {
+                description: "An error occurred. Please try again.",
+                duration: 3000,
             })
         }
     }
