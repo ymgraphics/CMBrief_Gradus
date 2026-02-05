@@ -18,6 +18,7 @@ interface BriefFile {
 export default function ArchivePage() {
     const [briefs, setBriefs] = useState<BriefFile[]>([]);
     const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
     const [selectedClient, setSelectedClient] = useState<string | null>(null);
 
     useEffect(() => {
@@ -25,11 +26,18 @@ export default function ArchivePage() {
             try {
                 const res = await fetch("/api/briefs/list");
                 const data = await res.json();
+
+                if (!res.ok) {
+                    throw new Error(data.error || "Failed to fetch briefs");
+                }
+
                 if (data.files) {
                     setBriefs(data.files);
                 }
-            } catch (error) {
-                console.error("Failed to fetch briefs", error);
+            } catch (err: any) {
+                console.error("Failed to fetch briefs", err);
+                setError(err.message);
+                setBriefs([]);
             } finally {
                 setLoading(false);
             }
@@ -85,6 +93,21 @@ export default function ArchivePage() {
                         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
                         <p className="mt-4 text-slate-500">Loading archive...</p>
                     </div>
+                ) : error ? (
+                    <Card className="border-destructive/50 bg-destructive/5">
+                        <CardContent className="flex flex-col items-center justify-center py-16 text-center">
+                            <div className="bg-destructive/10 p-4 rounded-full mb-4 text-destructive">
+                                <FolderOpen className="w-8 h-8" />
+                            </div>
+                            <h3 className="text-lg font-medium text-destructive">Archive Unavailable</h3>
+                            <p className="text-destructive/80 max-w-md mt-2">
+                                {error}
+                            </p>
+                            <p className="text-sm text-muted-foreground mt-4">
+                                Check your Cloudflare project settings {">"} R2 Bucket Bindings.
+                            </p>
+                        </CardContent>
+                    </Card>
                 ) : briefs.length === 0 ? (
                     <Card className="border-dashed">
                         <CardContent className="flex flex-col items-center justify-center py-16 text-center">

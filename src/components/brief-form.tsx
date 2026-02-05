@@ -108,18 +108,24 @@ export default function BriefForm() {
             formData.append('clientName', data.general.clientBrand || 'Uncategorized')
 
             try {
-                await fetch('/api/briefs/save', {
+                const response = await fetch('/api/briefs/save', {
                     method: 'POST',
                     body: formData,
                 })
+
+                if (!response.ok) {
+                    const errorData = await response.json().catch(() => ({}));
+                    throw new Error(errorData.error || "Server responded with error");
+                }
+
                 toast.success("PDF generated and saved to Archive!", {
                     description: "The brief has been successfully generated and archived.",
                     duration: 5000,
                 })
-            } catch (uploadError) {
+            } catch (uploadError: any) {
                 console.error("Failed to upload to archive:", uploadError)
-                toast.warning("Generated Locally Only", {
-                    description: "PDF generated but failed to save to server archive.",
+                toast.warning(`Archive Error: ${uploadError.message}`, {
+                    description: "Ensure Cloudflare R2 binding is configured.",
                     duration: 5000,
                 })
             }
