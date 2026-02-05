@@ -590,11 +590,21 @@ export default function BriefForm() {
                 </Card>
             </motion.div>
 
-            <div className="flex justify-end gap-4 sticky bottom-8 p-4 bg-background/60 backdrop-blur-lg border rounded-xl shadow-lg z-20 transition-all duration-300 hover:shadow-primary/20 hover:scale-[1.01]">
-                <Button type="button" variant="outline" onClick={() => handleExport()} className="bg-transparent">
+            <div className="flex justify-end gap-4 sticky bottom-8 p-4 bg-white/90 backdrop-blur-xl border border-slate-200 rounded-2xl shadow-xl z-20 transition-all duration-300 hover:shadow-2xl">
+                <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => handleExport()}
+                    className="bg-white hover:bg-slate-50 border-slate-300 text-slate-700 hover:text-slate-900 transition-all duration-200 shadow-sm hover:shadow-md"
+                >
+                    <Save className="w-4 h-4 mr-2" />
                     Save Progress
                 </Button>
-                <Button type="submit" size="lg" className="w-full md:w-auto shadow-lg shadow-primary/25">
+                <Button
+                    type="submit"
+                    size="lg"
+                    className="w-full md:w-auto bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white shadow-lg shadow-blue-500/30 hover:shadow-xl hover:shadow-blue-500/40 transition-all duration-200 hover:scale-[1.02]"
+                >
                     <Download className="w-4 h-4 mr-2" />
                     Generate PDF Brief
                 </Button>
